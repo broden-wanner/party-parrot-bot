@@ -14,22 +14,35 @@ bot = commands.Bot(command_prefix='%', description=description)
 bot.parrot_list = []
 
 
-def find_parrot(parrot: str) -> Parrot:
+def find_parrot(parrot: str, search_subtrings=False) -> Parrot:
     """
     Helper function to find the parrot object in the bot's parrot list
     """
 
-    query = parrot.lower().replace(' ', '')
-
-    # Search for exact mathces
+    # Search for exact matches on the id
+    query_id = parrot.lower().replace(' ', '')
     for p in bot.parrot_list:
-        if query == p.id:
+        if query_id == p.id:
             return p
     
     # Search for substrings
+    query_strings = parrot.lower().split()
     for p in bot.parrot_list:
-        if query in p.id:
-            return p
+        # Iterate through each word in the parrot name
+        for parrot_name_str in p.name.lower().split():
+            if parrot_name_str in query_strings:
+                return p
+        
+        # Iterate through each query string
+        for query_str in query_strings:
+            if query_str in p.name.lower().split():
+                return p
+
+    # Search substrings if specified
+    if search_subtrings:
+        for p in bot.parrot_list:
+            if query_id in p.id:
+                return p
 
     return None
 
@@ -70,6 +83,15 @@ async def on_message(message):
         await bot.process_commands(message)
         return
 
+    # Custom PARTY OR DIE message
+    if 'party?' in message.content.lower():
+        embed = discord.Embed()
+        parrot_obj = next((p for p in bot.parrot_list if p.id == 'partyparrot'), None)
+        embed.set_image(url=parrot_obj.url)
+        await message.channel.send('PARTY OR DIE!', embed=embed)
+        return
+
+
     # Set to lowercase, remove punctuation
     cleaned_message = message.content.lower()
     cleaned_message = cleaned_message.translate(str.maketrans('', '', string.punctuation))
@@ -99,7 +121,7 @@ async def parrot(ctx, *args):
     print(f'Received request for party parrot {parrot_name}')
 
     # Find the parrot object in the bot list
-    parrot_obj = find_parrot(parrot_name)
+    parrot_obj = find_parrot(parrot_name, search_subtrings=True)
     if not parrot_obj:
         print(f'Parrot {parrot_name} not found')
         await ctx.send(f'parrot {parrot_name} not found :(')

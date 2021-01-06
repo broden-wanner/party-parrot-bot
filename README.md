@@ -3,7 +3,8 @@
 A Discord bot to display party parrots on command. It also
 will insert party parrots where appropriate. Party or die.
 Uses the [discord.py](https://discordpy.readthedocs.io/en/latest/index.html)
-library to implement the bot.
+library to implement the bot. Invite link is 
+[here](https://discord.com/api/oauth2/authorize?client_id=796102321322328126&permissions=52224&scope=bot).
 
 Party parrots retrieved from the 
 [Cult of the Party Parrot](https://cultofthepartyparrot.com/).
