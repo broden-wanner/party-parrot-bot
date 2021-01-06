@@ -9,7 +9,7 @@ CHARACTER_LIMIT = 2000
 english_stopwords = stopwords.words('english')
 
 # Initialize the bot
-description = '''🦜 A bot to send party parrots. Party or die. 🦜'''
+description = '''🦜 A bot to send party parrots. Party or die. 🦜 '''
 bot = commands.Bot(command_prefix='%', description=description)
 bot.parrot_list = []
 
@@ -89,53 +89,45 @@ async def on_message(message):
             await message.channel.send(embed=embed)
             return
 
-class PartyParrotCommands(commands.Cog):
+
+@bot.command(name='parrot')
+async def parrot(ctx, *args):
     """
-    Party parrot commands
+    Display a party parrot of your choosing
+    """
+    parrot_name = ' '.join(args)
+    print(f'Received request for party parrot {parrot_name}')
+
+    # Find the parrot object in the bot list
+    parrot_obj = find_parrot(parrot_name)
+    if not parrot_obj:
+        print(f'Parrot {parrot_name} not found')
+        await ctx.send(f'parrot {parrot_name} not found :(')
+        return
+
+    # Embed the parrot gif url
+    embed = discord.Embed()
+    embed.set_image(url=parrot_obj.url)
+    await ctx.send(embed=embed)
+
+@bot.command(name='list')
+async def list_parrots(ctx, *args):
+    """
+    Lists all available party parrots
     """
 
-    description = "Party or die"
+    print('Listing parrots')
+    parrots_str = 'Gaze upon all parrots of which I am cognizant:\n'
+    old_parrots_str = parrots_str
+    for i, parrot in enumerate(bot.parrot_list):
+        parrots_str += f'{i+1}. {parrot.name}\n'
 
-    @commands.command(name='parrot')
-    async def parrot(ctx, *args):
-        """
-        Display a party parrot of your choosing
-        """
-        parrot_name = ' '.join(args)
-        print(f'Received request for party parrot {parrot_name}')
+        # Send message if the parrot string is too long
+        if len(parrots_str) > CHARACTER_LIMIT:
+            await ctx.send(old_parrots_str)
+            parrots_str = f'{i+1}. {parrot.name}\n'
 
-        # Find the parrot object in the bot list
-        parrot_obj = find_parrot(parrot_name)
-        if not parrot_obj:
-            print(f'Parrot {parrot_name} not found')
-            await ctx.send(f'parrot {parrot_name} not found :(')
-            return
-
-        # Embed the parrot gif url
-        embed = discord.Embed()
-        embed.set_image(url=parrot_obj.url)
-        await ctx.send(embed=embed)
-
-    @commands.command(name='list')
-    async def list_parrots(ctx, *args):
-        """
-        Lists all available party parrots
-        """
-
-        print('Listing parrots')
-        parrots_str = 'Gaze upon all parrots of which I am cognizant:\n'
         old_parrots_str = parrots_str
-        for i, parrot in enumerate(bot.parrot_list):
-            parrots_str += f'{i+1}. {parrot.name}\n'
 
-            # Send message if the parrot string is too long
-            if len(parrots_str) > CHARACTER_LIMIT:
-                await ctx.send(old_parrots_str)
-                parrots_str = f'{i+1}. {parrot.name}\n'
-
-            old_parrots_str = parrots_str
-
-        # Send the remaining parrots
-        await ctx.send(parrots_str)
-
-bot.add_cog(PartyParrotCommands())
+    # Send the remaining parrots
+    await ctx.send(parrots_str)
