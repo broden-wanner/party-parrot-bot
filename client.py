@@ -1,8 +1,13 @@
 import discord
 import string
+from random import randint
 from utils import Parrot, get_parrots_from_site
 from nltk.corpus import stopwords
-from discord.ext import commands
+from discord.ext import commands, tasks
+
+# Settings
+SEND_PARROT_IN_REGULAR_MESSAGES = False
+POSITIVE_MESSAGE_LOOP_HOURS = 46
 
 # Set up some globals
 CHARACTER_LIMIT = 2000
@@ -13,6 +18,9 @@ description = '''🦜 A bot to send party parrots. Party or die. 🦜 '''
 bot = commands.Bot(command_prefix='%', description=description)
 bot.parrot_list = []
 
+
+
+## Utility functions
 
 def find_parrot(parrot: str, search_subtrings=False) -> Parrot:
     """
@@ -45,6 +53,21 @@ def find_parrot(parrot: str, search_subtrings=False) -> Parrot:
                 return p
 
     return None
+
+def random_parrot() -> Parrot:
+    """Retrives a random parrot for your pleasure
+
+    Returns:
+        Parrot: The random parrot object chosen
+    """
+    # Get a random parrot
+    pi = randint(0, len(bot.parrot_list))
+    parrot_obj = bot.parrot_list[pi]
+    return parrot_obj
+
+
+
+## Event listeners
 
 @bot.event
 async def on_ready():
@@ -83,6 +106,11 @@ async def on_message(message):
         await bot.process_commands(message)
         return
 
+    # Check for mentions
+    if bot.user.mentioned_in(message):
+        await message.channel.send("pls stop bothering me, i am partying")
+        return
+
     # Custom PARTY OR DIE message
     if 'party?' in message.content.lower():
         embed = discord.Embed()
@@ -91,6 +119,9 @@ async def on_message(message):
         await message.channel.send('PARTY OR DIE!', embed=embed)
         return
 
+    # Do nothing else if regular messages aren't enabled
+    if not SEND_PARROT_IN_REGULAR_MESSAGES:
+        return
 
     # Set to lowercase, remove punctuation
     cleaned_message = message.content.lower()
@@ -112,6 +143,9 @@ async def on_message(message):
             return
 
 
+
+## Commands
+
 @bot.command(name='parrot')
 async def parrot(ctx, *args):
     """
@@ -132,6 +166,20 @@ async def parrot(ctx, *args):
     embed.set_image(url=parrot_obj.url)
     await ctx.send(embed=embed)
 
+@bot.command(name='random')
+async def random_parrot_request(ctx, *args):
+    """
+    Display a random party parrot
+    """
+    # Get random parrot
+    parrot_obj = random_parrot()
+
+    # Embed the parrot gif url
+    embed = discord.Embed()
+    embed.set_image(url=parrot_obj.url)
+    await ctx.send(embed=embed)
+
+
 @bot.command(name='list')
 async def list_parrots(ctx, *args):
     """
@@ -142,14 +190,47 @@ async def list_parrots(ctx, *args):
     parrots_str = 'Gaze upon all parrots of which I am cognizant:\n'
     old_parrots_str = parrots_str
     for i, parrot in enumerate(bot.parrot_list):
-        parrots_str += f'{i+1}. {parrot.name}\n'
+        parrots_str += f'{i+1}. {parrot.name} ({parrot.id})\n'
 
         # Send message if the parrot string is too long
         if len(parrots_str) > CHARACTER_LIMIT:
             await ctx.send(old_parrots_str)
-            parrots_str = f'{i+1}. {parrot.name}\n'
+            parrots_str = f'{i+1}. {parrot.name} ({parrot.id})\n'
 
         old_parrots_str = parrots_str
 
     # Send the remaining parrots
     await ctx.send(parrots_str)
+
+
+
+## Background tasks
+
+@tasks.loop(hours=POSITIVE_MESSAGE_LOOP_HOURS)
+async def positive_message_loop():
+    """
+    Set up a loop to send a positive message and a parrot every so often
+    """
+    # Get the main channel
+    channel = bot.get_channel(749428787166314639)
+
+    # Get random parrot
+    parrot_obj = random_parrot()
+
+    # Embed the parrot gif url
+    embed = discord.Embed()
+    embed.set_image(url=parrot_obj.url)
+
+    # Send the message
+    msg = 'you all are beautiful and deserve happiness, so here\'s a random parrot to lighten the mood for you:'
+    await channel.send(msg, embed=embed)
+
+@positive_message_loop.before_loop
+async def wait_for_bot_ready():
+    """
+    Wait until the bot is ready until we send
+    """
+    await bot.wait_until_ready()
+
+# Start background tasks
+positive_message_loop.start()
